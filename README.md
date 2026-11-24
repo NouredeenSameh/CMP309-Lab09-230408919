@@ -161,3 +161,13 @@ Access-Control-Allow-Methods: GET,HEAD,PUT,PATCH,POST,DELETE
 Access-Control-Allow-Headers: content-type
 Vary: Access-Control-Request-Headers
 ```
+
+## Reasoning Questions
+
+1. **Parameters:** The book's `id` identifies a specific single resource in the REST hierarchy (`/api/books/:id`), whereas `genre` and `sort` are optional filtering and ordering modifiers applied to the entire collection (`/api/books`). If `id` were placed in the query string (`/api/books?id=1`), endpoints like `PUT`, `PATCH`, and `DELETE` would no longer address a distinct resource URI and would complicate RESTful routing and `Location` headers.
+2. **Body parsing (Experiment):** Moving `app.use(express.json())` below the routes caused `req.body` inside `POST /api/books` to be `undefined`. Consequently, `validateBookPayload(req.body)` rejected the request and the server returned `400 Bad Request` (`{"error":"Request body must be a JSON object"}`).
+3. **One response (Experiment):** Removing `return` before an early `res.status(404).json(...)` caused Express to send the 404 response and continue executing the remaining handler code, attempting to send a second response for the same request. Node/Express threw `Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client` in the server console.
+4. **PUT and PATCH:** `PUT /api/books/:id` is the better choice when editing the entire book record in the edit form where all fields (`title`, `author`, `year`, `genre`, `read`, `rating`) are submitted as a complete replacement. `PATCH /api/books/:id` is the better choice when toggling a single field such as `read` or updating only `rating` directly from a book card without resending unchanged fields.
+5. **CORS (Experiment):** Setting `CLIENT_ORIGIN=http://localhost:9999` caused the browser console to block the response with a CORS policy error (`Access-Control-Allow-Origin` mismatch). The server still logged and processed the incoming request because CORS is enforced by the browser—not the server—which is also why `curl` continues to work unaffected by CORS headers.
+6. **Validation:** Client-side checks only improve user experience and can be bypassed easily using `curl`, Postman, or browser DevTools. The server must validate all inputs independently to protect data integrity, prevent invalid state (such as a rating on an unread book), and enforce duplicate constraints.
+7. **State:** Restarting the Express server reset all added, edited, and deleted books back to the initial 6 seed books. This shows that the data lives strictly in volatile RAM inside the Node.js process, and persisting data across restarts requires an external database or file-backed storage.
