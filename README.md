@@ -171,3 +171,18 @@ Vary: Access-Control-Request-Headers
 5. **CORS (Experiment):** Setting `CLIENT_ORIGIN=http://localhost:9999` caused the browser console to block the response with a CORS policy error (`Access-Control-Allow-Origin` mismatch). The server still logged and processed the incoming request because CORS is enforced by the browser—not the server—which is also why `curl` continues to work unaffected by CORS headers.
 6. **Validation:** Client-side checks only improve user experience and can be bypassed easily using `curl`, Postman, or browser DevTools. The server must validate all inputs independently to protect data integrity, prevent invalid state (such as a rating on an unread book), and enforce duplicate constraints.
 7. **State:** Restarting the Express server reset all added, edited, and deleted books back to the initial 6 seed books. This shows that the data lives strictly in volatile RAM inside the Node.js process, and persisting data across restarts requires an external database or file-backed storage.
+
+
+
+## Self-Study Findings
+
+- **Safe Query Strings (`URLSearchParams`):** Used `new URLSearchParams()` in `client/src/api/books.js` to encode filter and search parameters safely without manual string concatenation.
+- **Alphabetical Sorting (`localeCompare`):** Used `a[sort].localeCompare(b[sort], undefined, { sensitivity: "base" })` in `server/server.js` for case-insensitive alphabetical sorting on `title` and `author`.
+- **Vite Environment Variables (`import.meta.env.VITE_*`):** Read `import.meta.env.VITE_API_URL` in the client; Vite requires the `VITE_` prefix so only explicitly exposed variables are bundled into client-side code.
+- **Express 5 Empty Responses (`204 No Content`):** Used `res.status(204).send()` in `DELETE /api/books/:id` to return an empty response body compliant with HTTP `204` semantics in Express 5.
+- **Cancelling Stale Fetches (`AbortController` & `AbortError`):** Passed an `AbortController` signal inside `useEffect` in `App.jsx` and ignored errors where `err.name === "AbortError"` so rapid filter changes never let stale responses overwrite newer results.
+
+## Challenges Faced
+
+- **Express 5 Catch-All Routing:** Express 5 rejects wildcard `app.get("*")` paths, so unmatched routes were handled using `app.use("/api", ...)` and a final `app.use(...)` fallback.
+- **Immutable State Synchronization:** Ensuring neither `booksStore.js` nor React state mutated arrays or objects in place required cloning objects on read/write and re-fetching fresh filtered books and `/api/stats` after every mutation.
